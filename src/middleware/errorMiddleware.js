@@ -9,7 +9,8 @@ const notFound = (req, res, next) => {
 const errorHandler = (err, req, res, next) => {
   console.error(`[Error Handler]: ${err.stack || err.message}`);
 
-  let statusCode = res.statusCode !== 200 ? res.statusCode : statusCodes.INTERNAL_SERVER_ERROR;
+  // Use err.statusCode first (set by our service/controller errors), then res.statusCode, then fallback to 500
+  let statusCode = err.statusCode || (res.statusCode !== 200 ? res.statusCode : statusCodes.INTERNAL_SERVER_ERROR);
   let message = err.message || 'Internal Server Error';
   let errors = null;
 

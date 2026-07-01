@@ -13,31 +13,32 @@ const seedDatabase = async () => {
 
     console.log('[Database Seed]: Seeding initial team members (Arman, Sadman, Adnan, Faheem)...');
 
+    // All passwords match the frontend PIN 'Awaazfmdie' so login works immediately
     const arman = await User.create({
       name: 'Arman',
       email: 'arman@startup.io',
-      passwordHash: '1111',
+      passwordHash: 'Awaazfmdie',
       avatar: 'AR'
     });
 
     const sadman = await User.create({
       name: 'Sadman',
       email: 'sadman@startup.io',
-      passwordHash: '2222',
+      passwordHash: 'Awaazfmdie',
       avatar: 'SA'
     });
 
     const adnan = await User.create({
       name: 'Adnan',
       email: 'adnan@startup.io',
-      passwordHash: '3333',
+      passwordHash: 'Awaazfmdie',
       avatar: 'AD'
     });
 
     const faheem = await User.create({
       name: 'Faheem',
       email: 'faheem@startup.io',
-      passwordHash: '4444',
+      passwordHash: 'Awaazfmdie',
       avatar: 'FA'
     });
 

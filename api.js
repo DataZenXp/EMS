@@ -62,7 +62,7 @@ class ApiClient {
     if (res && res.token) {
       this.setToken(res.token);
     }
-    return res.data.user;
+    return res?.data?.user || null;
   }
 
   static async logout() {

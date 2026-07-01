@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-module.exports = {
+const config = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
   MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ems_production',
@@ -9,3 +9,8 @@ module.exports = {
   COOKIE_SECRET: process.env.COOKIE_SECRET || 'cookie_signature_secret_ems',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000'
 };
+
+// Log config status (without secrets) for debugging
+console.log(`[Config]: NODE_ENV=${config.NODE_ENV}, PORT=${config.PORT}, MONGO_URI=${config.MONGO_URI ? config.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@') : '(not set)'}`);
+
+module.exports = config;

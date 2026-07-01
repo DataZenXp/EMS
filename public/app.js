@@ -880,10 +880,6 @@ async function shiftTaskStatus(taskId, newStatus) {
   showToast(`✦ Status moved to ${newStatus}`);
 }
 
-function quickAdvance(taskId, newStatus) {
-  shiftTaskStatus(taskId, newStatus);
-}
-
 async function addCommentToTask(e, taskId) {
   e.preventDefault();
   const input = document.getElementById('new-comment-input');
