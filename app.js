@@ -511,11 +511,11 @@ function renderTaskCard(task) {
   if (!allowed) {
     nextActionHtml = `<span style="font-size:0.75rem; color:var(--ink-muted); font-weight:700; background:#eee; padding:3px 8px; border:1px solid #ccc;">👤 ${assignee.name}'s Task</span>`;
   } else if (task.status === 'Todo') {
-    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'In Progress')">Start 🚀</button>`;
+    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'In Progress')">Start 🚀</button>`;
   } else if (task.status === 'In Progress') {
-    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'Review')">Review 👀</button>`;
+    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'Review')">Review 👀</button>`;
   } else if (task.status === 'Review') {
-    nextActionHtml = `<button class="btn-status-action" style="background:var(--emerald); border-color:#000;" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'Completed')">Complete ✓</button>`;
+    nextActionHtml = `<button class="btn-status-action" style="background:var(--emerald); border-color:#000;" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'Completed')">Complete ✓</button>`;
   } else if (task.status === 'Completed') {
     nextActionHtml = `<span style="font-size:0.75rem; color:var(--emerald); font-weight:800;">✓ Finished</span>`;
   }
@@ -548,11 +548,13 @@ function renderTaskListItem(task) {
   if (!allowed) {
     nextActionHtml = `<span style="font-size:0.75rem; color:var(--ink-muted); font-weight:700; background:#eee; padding:3px 8px; border:1px solid #ccc;">👤 Assigned to ${assignee.name}</span>`;
   } else if (task.status === 'Todo') {
-    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'In Progress')">Move to In Progress 🚀</button>`;
+    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'In Progress')">Move to In Progress 🚀</button>`;
   } else if (task.status === 'In Progress') {
-    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'Review')">Move to Review 👀</button>`;
+    nextActionHtml = `<button class="btn-status-action" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'Review')">Move to Review 👀</button>`;
   } else if (task.status === 'Review') {
-    nextActionHtml = `<button class="btn-status-action" style="background:var(--emerald);" onclick="event.stopPropagation(); quickAdvance('${task.id}', 'Completed')">Mark Complete ✓</button>`;
+    nextActionHtml = `<button class="btn-status-action" style="background:var(--emerald);" onclick="event.stopPropagation(); shiftTaskStatus('${task.id}', 'Completed')">Mark Complete ✓</button>`;
+  } else if (task.status === 'Completed') {
+    nextActionHtml = `<span style="font-size:0.8rem; font-weight:800; color:var(--emerald); background:#E6F4EA; padding:4px 10px; border:1px solid #000;">✓ COMPLETED</span>`;
   }
 
   return `
@@ -876,6 +878,10 @@ async function shiftTaskStatus(taskId, newStatus) {
   if (isDrawerOpen) openTaskDetail(taskId);
   renderCurrentView();
   showToast(`✦ Status moved to ${newStatus}`);
+}
+
+function quickAdvance(taskId, newStatus) {
+  shiftTaskStatus(taskId, newStatus);
 }
 
 async function addCommentToTask(e, taskId) {
