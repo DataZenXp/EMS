@@ -96,11 +96,15 @@ async function handleLoginSubmit(e) {
   const pinInput = document.getElementById('login-pin').value.trim();
   const errBox = document.getElementById('login-error');
 
+  // Always re-initialize members from source of truth to fix any corrupted localStorage
+  const freshMembers = JSON.parse(JSON.stringify(INITIAL_COLLABORATIVE_DATA.members));
+  state.members = freshMembers;
+
   const queryName = nameInput || idInput;
   const member = state.members.find(m => m.name.toLowerCase() === queryName?.toLowerCase() || m.id === queryName);
   if (!member || (pinInput !== member.pin && pinInput !== 'Awaazfmdie')) {
     if (errBox) {
-      errBox.textContent = '✕ Invalid teammate name or incorrect passcode.';
+      errBox.textContent = '✕ Invalid teammate name or incorrect passcode. Use: Arman, Sadman, Adnan, or Faheem';
       errBox.style.display = 'block';
     }
     return;
@@ -112,15 +116,18 @@ async function handleLoginSubmit(e) {
 
   try {
     if (window.ApiClient) {
-      await ApiClient.login(member.email, pinInput);
+      const loggedInUser = await ApiClient.login(member.email, pinInput);
+      if (loggedInUser) {
+        console.log('[Login]: API login success for', loggedInUser.name || member.name);
+      }
       await syncRemoteData();
     }
   } catch (err) {
-    console.warn('[Login]: Live backend API login failed, proceeding in offline mode.');
+    console.warn('[Login]: Live backend API login failed, using offline mode:', err.message);
   }
-  
+
   await checkAuthenticationState();
-  showToast(`✦ Welcome back, ${member.name}! Connected to Live Backend.`);
+  showToast(`✦ Welcome back, ${member.name}!`);
 }
 
 async function handleUserLogout() {
