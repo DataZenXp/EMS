@@ -296,6 +296,9 @@ function renderCurrentView() {
     case 'team':
       renderTeamPage(container);
       break;
+    case 'attendance':
+      renderAttendancePage(container);
+      break;
     case 'notifications':
       renderNotificationsPage(container);
       break;
@@ -337,6 +340,35 @@ function renderDashboard(container) {
         <h1>Welcome, ${peer.name} 👋</h1>
       </div>
       <div class="view-meta">Authenticated workspace for Arman, Sadman, Adnan & Faheem</div>
+    </div>
+
+    <!-- ATTENDANCE CLOCK-IN/OUT BANNER -->
+    <div class="korpus-panel" style="margin-bottom: 24px; background: ${peer.clockStatus === 'IN' ? '#F0FDF4' : '#FFF'}; border: 3px solid #000; box-shadow: 4px 4px 0px #000;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="font-size:2.5rem;">${peer.clockStatus === 'IN' ? '🟢' : '⭕'}</div>
+          <div>
+            <div style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--ink-muted);">Current Shift Status</div>
+            <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY (FINISHED)'}</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
+              ${peer.clockStatus === 'IN' 
+                ? `Clocked in at ${new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Logged time today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` : 'Ready to start your work shift? Click Clock In!')}
+            </div>
+          </div>
+        </div>
+        <div>
+          ${peer.clockStatus === 'IN' ? `
+            <button class="korpus-btn" style="background:#FF3B30; color:#FFF; font-size:1.05rem; padding:12px 24px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;" onclick="toggleClockStatus('${peer.id}', 'OUT')">
+              ⏹ CLOCK OUT & FINISH WORK
+            </button>
+          ` : `
+            <button class="korpus-btn" style="background:#00C865; color:#FFF; font-size:1.05rem; padding:12px 24px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;" onclick="toggleClockStatus('${peer.id}', 'IN')">
+              ▶ CLOCK IN & START WORK
+            </button>
+          `}
+        </div>
+      </div>
     </div>
 
     <!-- STAT READOUT CARDS -->
@@ -713,6 +745,140 @@ async function dismissNotif(id) {
   saveCollaborativeState(state);
   updateHeaderUser();
   renderCurrentView();
+}
+
+/* WORK SHIFTS / ATTENDANCE CLOCK IN & CLOCK OUT */
+function toggleClockStatus(userId, action) {
+  const mem = state.members.find(m => m.id === userId);
+  if (!mem) return;
+
+  const now = new Date();
+  if (action === 'IN') {
+    mem.clockStatus = 'IN';
+    mem.lastClockIn = now.toISOString();
+    if (!state.attendanceLogs) state.attendanceLogs = [];
+    state.attendanceLogs.unshift({
+      id: 'LOG-' + Date.now(),
+      userId: mem.id,
+      userName: mem.name,
+      action: 'CLOCK_IN',
+      timestamp: now.toISOString(),
+      note: 'Arrived and clocked in to work'
+    });
+    showToast(`✦ ${mem.name} clocked in! Have a productive shift.`);
+  } else if (action === 'OUT') {
+    mem.clockStatus = 'OUT';
+    mem.lastClockOut = now.toISOString();
+    if (mem.lastClockIn) {
+      const elapsedMins = Math.round((now - new Date(mem.lastClockIn)) / 60000);
+      mem.totalMinutesToday = (mem.totalMinutesToday || 0) + Math.max(1, elapsedMins);
+    } else {
+      mem.totalMinutesToday = (mem.totalMinutesToday || 0) + 30;
+    }
+    if (!state.attendanceLogs) state.attendanceLogs = [];
+    state.attendanceLogs.unshift({
+      id: 'LOG-' + Date.now(),
+      userId: mem.id,
+      userName: mem.name,
+      action: 'CLOCK_OUT',
+      timestamp: now.toISOString(),
+      note: `Finished shift (${Math.floor((mem.totalMinutesToday || 0)/60)}h ${(mem.totalMinutesToday || 0)%60}m total today)`
+    });
+    showToast(`✦ ${mem.name} clocked out! Great job today.`);
+  }
+  saveCollaborativeState(state);
+  renderCurrentView();
+}
+
+function renderAttendancePage(container) {
+  const peer = getActivePeer();
+  container.innerHTML = `
+    <div class="view-header">
+      <div class="view-title">
+        <h1>Work Shifts & Attendance ⏱</h1>
+      </div>
+      <div class="view-meta">Track when team members arrive at work and finish their shifts</div>
+    </div>
+
+    <!-- YOUR SHIFT CONTROL CARD -->
+    <div class="korpus-panel" style="margin-bottom: 24px; background: ${peer.clockStatus === 'IN' ? '#F0FDF4' : '#FFF'}; border: 3px solid #000; box-shadow: 4px 4px 0px #000;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="font-size:2.5rem;">${peer.clockStatus === 'IN' ? '🟢' : '⭕'}</div>
+          <div>
+            <div style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--ink-muted);">My Current Shift</div>
+            <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY (FINISHED)'}</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
+              ${peer.clockStatus === 'IN' 
+                ? `Clocked in at ${new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Logged time today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` : 'Ready to start your work shift? Click Clock In!')}
+            </div>
+          </div>
+        </div>
+        <div>
+          ${peer.clockStatus === 'IN' ? `
+            <button class="korpus-btn" style="background:#FF3B30; color:#FFF; font-size:1.05rem; padding:12px 24px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;" onclick="toggleClockStatus('${peer.id}', 'OUT')">
+              ⏹ CLOCK OUT & FINISH WORK
+            </button>
+          ` : `
+            <button class="korpus-btn" style="background:#00C865; color:#FFF; font-size:1.05rem; padding:12px 24px; border:2.5px solid #000; box-shadow:3px 3px 0 #000;" onclick="toggleClockStatus('${peer.id}', 'IN')">
+              ▶ CLOCK IN & START WORK
+            </button>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM ROSTER SHIFTS -->
+    <div class="korpus-panel" style="margin-bottom: 24px;">
+      <div class="panel-header">
+        <span>👥 Live Team Shift Roster</span>
+        <span style="font-size:0.75rem; font-weight:700;">Real-time status</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+        ${state.members.map(m => `
+          <div style="border:2px solid #000; padding:16px; background:${m.clockStatus === 'IN' ? '#F0FDF4' : '#F8F9FA'}; box-shadow:3px 3px 0 #000;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:900; font-size:1.1rem;">${m.name}</span>
+              <span style="font-size:0.75rem; font-weight:800; padding:4px 8px; border:1.5px solid #000; background:${m.clockStatus === 'IN' ? '#00C865' : '#E5E5EA'}; color:${m.clockStatus === 'IN' ? '#FFF' : '#000'};">
+                ${m.clockStatus === 'IN' ? '🟢 WORKING' : '⚪ FINISHED'}
+              </span>
+            </div>
+            <div style="font-size:0.8rem; font-weight:700; color:#444; line-height:1.5;">
+              <div>Clock In: ${m.lastClockIn ? new Date(m.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'}</div>
+              <div>Clock Out: ${m.lastClockOut ? new Date(m.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'}</div>
+              <div style="margin-top:6px; font-weight:800; color:#000;">Total Today: ${Math.floor((m.totalMinutesToday || 0)/60)}h ${(m.totalMinutesToday || 0)%60}m</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- RECENT ATTENDANCE LOGS -->
+    <div class="korpus-panel">
+      <div class="panel-header">
+        <span>📋 Shift Activity & History Log</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${(!state.attendanceLogs || state.attendanceLogs.length === 0) ? `
+          <div style="padding:24px; text-align:center; color:var(--ink-muted); font-weight:700;">No shift activity recorded yet today.</div>
+        ` : state.attendanceLogs.map(log => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1.5px solid #000; background:#FFF;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:1.3rem;">${log.action === 'CLOCK_IN' ? '▶️' : '⏹️'}</span>
+              <div>
+                <div style="font-weight:800; font-size:0.95rem;">${log.userName} ${log.action === 'CLOCK_IN' ? 'clocked in to work' : 'clocked out & finished shift'}</div>
+                <div style="font-size:0.75rem; color:var(--ink-muted);">${log.note || ''}</div>
+              </div>
+            </div>
+            <div style="font-size:0.8rem; font-weight:800; font-family:var(--font-code);">
+              ${new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} (${new Date(log.timestamp).toLocaleDateString()})
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 /* TASK DETAILS DRAWER WITH OWNERSHIP LOCKS */

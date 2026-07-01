@@ -12,25 +12,41 @@ const INITIAL_COLLABORATIVE_DATA = {
       id: 'MEM-1',
       name: 'Arman',
       email: 'arman@startup.io',
-      pin: 'Awaazfmdie'
+      pin: 'Awaazfmdie',
+      clockStatus: 'OUT',
+      lastClockIn: null,
+      lastClockOut: null,
+      totalMinutesToday: 0
     },
     {
       id: 'MEM-2',
       name: 'Sadman',
       email: 'sadman@startup.io',
-      pin: 'Awaazfmdie'
+      pin: 'Awaazfmdie',
+      clockStatus: 'OUT',
+      lastClockIn: null,
+      lastClockOut: null,
+      totalMinutesToday: 0
     },
     {
       id: 'MEM-3',
       name: 'Adnan',
       email: 'adnan@startup.io',
-      pin: 'Awaazfmdie'
+      pin: 'Awaazfmdie',
+      clockStatus: 'OUT',
+      lastClockIn: null,
+      lastClockOut: null,
+      totalMinutesToday: 0
     },
     {
       id: 'MEM-4',
       name: 'Faheem',
       email: 'faheem@startup.io',
-      pin: 'Awaazfmdie'
+      pin: 'Awaazfmdie',
+      clockStatus: 'OUT',
+      lastClockIn: null,
+      lastClockOut: null,
+      totalMinutesToday: 0
     }
   ],
   tasks: [
@@ -100,6 +116,10 @@ const INITIAL_COLLABORATIVE_DATA = {
       timestamp: 'Just now',
       read: false
     }
+  ],
+  attendanceLogs: [
+    { id: 'LOG-1', userId: 'MEM-1', userName: 'Arman', action: 'CLOCK_IN', timestamp: new Date(Date.now() - 3600000 * 4).toISOString() },
+    { id: 'LOG-2', userId: 'MEM-2', userName: 'Sadman', action: 'CLOCK_IN', timestamp: new Date(Date.now() - 3600000 * 3.5).toISOString() }
   ]
 };
 
@@ -108,11 +128,16 @@ function getCollaborativeState() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
+      if (!parsed.attendanceLogs) parsed.attendanceLogs = [];
       if (parsed.members && Array.isArray(parsed.members)) {
         parsed.members.forEach(m => {
           m.pin = 'Awaazfmdie';
           delete m.role;
           delete m.bio;
+          if (!m.clockStatus) m.clockStatus = 'OUT';
+          if (m.lastClockIn === undefined) m.lastClockIn = null;
+          if (m.lastClockOut === undefined) m.lastClockOut = null;
+          if (m.totalMinutesToday === undefined) m.totalMinutesToday = 0;
         });
       }
       return parsed;
