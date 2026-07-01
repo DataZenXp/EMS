@@ -1,0 +1,101 @@
+const Task = require('../models/Task');
+const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
+const { TASK_STATUS } = require('../constants/roles');
+
+class DashboardService {
+  static async getMyTasks(userId) {
+    return Task.find({ assignedTo: userId })
+      .populate('assignedTo createdBy', 'name email avatar')
+      .sort({ createdAt: -1 });
+  }
+
+  static async getTasksAssignedToMe(userId) {
+    return Task.find({ assignedTo: userId })
+      .populate('createdBy', 'name email avatar')
+      .sort({ createdAt: -1 });
+  }
+
+  static async getTasksCreatedByMe(userId) {
+    return Task.find({ createdBy: userId })
+      .populate('assignedTo', 'name email avatar')
+      .sort({ createdAt: -1 });
+  }
+
+  static async getPendingTasks(userId) {
+    return Task.find({
+      assignedTo: userId,
+      status: { $ne: TASK_STATUS.COMPLETED }
+    })
+      .populate('assignedTo createdBy', 'name email avatar')
+      .sort({ dueDate: 1 });
+  }
+
+  static async getCompletedTasks(userId) {
+    return Task.find({
+      assignedTo: userId,
+      status: TASK_STATUS.COMPLETED
+    })
+      .populate('assignedTo createdBy', 'name email avatar')
+      .sort({ updatedAt: -1 });
+  }
+
+  static async getDueTodayTasks(userId) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return Task.find({
+      assignedTo: userId,
+      status: { $ne: TASK_STATUS.COMPLETED },
+      dueDate: { $gte: startOfDay, $lte: endOfDay }
+    })
+      .populate('assignedTo createdBy', 'name email avatar');
+  }
+
+  static async getTeamOverview() {
+    const users = await User.find({}, 'name email avatar isOnline availability');
+    const allTasks = await Task.find({}, 'status assignedTo priority');
+
+    return users.map(user => {
+      const userTasks = allTasks.filter(t => t.assignedTo.toString() === user._id.toString());
+      const active = userTasks.filter(t => t.status !== TASK_STATUS.COMPLETED).length;
+      const completed = userTasks.filter(t => t.status === TASK_STATUS.COMPLETED).length;
+
+      return {
+        user,
+        metrics: {
+          total: userTasks.length,
+          active,
+          completed
+        }
+      };
+    });
+  }
+
+  static async getRecentActivity(limit = 20) {
+    return ActivityLog.find({})
+      .populate('userId', 'name avatar')
+      .populate('taskId', 'title status')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+  }
+
+  static async updateMemberAvailability(identifier, availability) {
+    let user = null;
+    if (identifier && identifier.match(/^[0-9a-fA-F]{24}$/)) {
+      user = await User.findById(identifier);
+    }
+    if (!user && identifier) {
+      user = await User.findOne({ $or: [{ email: identifier.toLowerCase() }, { name: identifier }] });
+    }
+    if (!user) return null;
+    user.availability = availability;
+    await user.save();
+    return user;
+  }
+}
+
+module.exports = DashboardService;
