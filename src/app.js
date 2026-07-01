@@ -29,7 +29,13 @@ app.use(cookieParser(config.COOKIE_SECRET));
 app.use('/api/v1', apiRoutes);
 
 // Serve Frontend Static Files seamlessly from project root
+const rootDir = process.cwd();
+app.use(express.static(rootDir));
 app.use(express.static(path.join(__dirname, '..')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(rootDir, 'index.html'));
+});
 
 // 404 Route Handler
 app.use(notFound);
