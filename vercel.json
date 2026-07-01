@@ -2,10 +2,10 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": "{index.html,styles.css,app.js,data.js,api.js}"
+      "includeFiles": "*{.html,.css,.js}"
     },
     "src/server.js": {
-      "includeFiles": "{index.html,styles.css,app.js,data.js,api.js}"
+      "includeFiles": "*{.html,.css,.js}"
     }
   },
   "rewrites": [

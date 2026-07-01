@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TASKGRID // Secure Team Login</title>
+  
+  <!-- Typography Stack: Archivo Black, Plus Jakarta Sans, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- FULL SCREEN SECURE LOGIN GATEWAY -->
+  <div class="login-gateway" id="login-gateway" style="display:none;">
+    <div class="login-card">
+      <div class="login-top">
+        <span>TASKGRID // SECURE TEAM GATEWAY</span>
+        <span>INTERNAL USE ONLY</span>
+      </div>
+      <div class="login-body">
+        <h1 class="login-title">WHO IS LOGGING IN?</h1>
+        <p class="login-subtitle">Select your account and enter your personal PIN. Once logged in, no one else can edit or complete your assigned tasks.</p>
+
+        <form id="login-form" onsubmit="handleLoginSubmit(event)" style="display:flex; flex-direction:column; gap:20px; text-align:left; max-width:420px; margin:0 auto;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:800; display:block; margin-bottom:8px;">Teammate Name</label>
+            <input type="text" id="login-member-name" placeholder="Enter your name (e.g. Arman, Sadman)..." style="width:100%; padding:14px; font-size:1.05rem; font-weight:700; border:2px solid #000;" required autofocus>
+          </div>
+
+          <div>
+            <label style="font-size:0.85rem; font-weight:800; display:block; margin-bottom:8px;">Personal Passcode</label>
+            <input type="password" id="login-pin" placeholder="Enter secret password..." style="width:100%; padding:14px; font-size:1.1rem; font-family:var(--font-code); font-weight:700; border:2px solid #000; text-align:center;" required>
+          </div>
+
+          <div id="login-error" style="color:var(--crimson); font-weight:800; font-size:0.85rem; text-align:center; display:none;">
+            ✕ Incorrect PIN. Please try again.
+          </div>
+
+          <button type="submit" class="korpus-btn korpus-btn-orange full-btn" style="padding:14px; font-size:1.05rem;">
+            Authenticate & Open Workspace →
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP LAYOUT WRAPPER (HIDDEN UNTIL AUTHENTICATED) -->
+  <div class="app-layout" id="app-layout" style="display:none;">
+    
+    <!-- LEFT SIDEBAR NAVIGATION -->
+    <aside class="sidebar-nav">
+      <div class="sidebar-brand">
+        <div class="brand-id">TASKGRID<span class="brand-accent">.4</span></div>
+        <div class="brand-subtitle">Arman • Sadman • Adnan • Faheem</div>
+      </div>
+
+      <!-- ACTIVE SECURE USER BOX IN SIDEBAR -->
+      <div class="sidebar-user-box secure-user-box" title="Authenticated Team Account">
+        <div class="user-avatar-circle" id="sidebar-user-avatar">AR</div>
+        <div class="user-info">
+          <div class="user-label">Logged In Securely</div>
+          <div class="user-name" id="sidebar-user-name">Arman</div>
+        </div>
+        <span style="font-size:0.75rem; color:var(--emerald);">🔒</span>
+      </div>
+
+      <!-- NAVIGATION LINKS -->
+      <div class="nav-links">
+        <button class="nav-item active" data-view="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="board">
+          <i data-lucide="kanban"></i>
+          <span>Task Board</span>
+          <span class="nav-badge" id="nav-badge-tasks">7</span>
+        </button>
+        <button class="nav-item" data-view="team">
+          <i data-lucide="users"></i>
+          <span>Team Roster</span>
+          <span class="nav-badge gray-badge">4</span>
+        </button>
+        <button class="nav-item" data-view="notifications">
+          <i data-lucide="bell"></i>
+          <span>Notifications</span>
+          <span class="nav-badge orange-badge" id="nav-badge-notifs">2</span>
+        </button>
+      </div>
+
+      <!-- SIDEBAR FOOTER ACTION -->
+      <div class="sidebar-foot" style="display:flex; flex-direction:column; gap:10px;">
+        <button class="korpus-btn korpus-btn-orange full-btn" id="btn-open-create-task" style="font-size:0.95rem; padding:12px;">
+          <i data-lucide="plus-circle"></i>
+          <span>+ Create Task</span>
+        </button>
+        <button class="korpus-btn full-btn" onclick="handleUserLogout()" style="font-size:0.82rem; padding:8px; background:var(--canvas-bg); border-color:#000;">
+          <span>Logout Account 🔒</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT AREA -->
+    <div class="main-wrapper">
+      
+      <!-- TOP ACTION BAR -->
+      <header class="top-bar">
+        <!-- TOP SECURE STATUS DISPLAY (REPLACED OPEN SWITCHER WITH SECURE BADGE) -->
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:0.82rem; font-weight:800; background:#000; color:#fff; padding:6px 12px; display:flex; align-items:center; gap:6px;">
+            🔒 LOGGED IN: <span id="top-bar-username" style="color:var(--orange);">Arman</span>
+          </span>
+          <span style="font-size:0.75rem; font-weight:700; color:var(--ink-muted);">Tasks owned by others are locked from unauthorized edits.</span>
+        </div>
+
+        <!-- SEARCH BAR -->
+        <div class="search-frame">
+          <i data-lucide="search" class="search-prompt"></i>
+          <input type="text" id="global-search-input" placeholder="Search tasks... [CMD+K]">
+        </div>
+
+      </header>
+
+      <!-- VIEW CANVAS -->
+      <main class="view-canvas" id="view-container">
+        <!-- Injected dynamically via app.js -->
+      </main>
+
+    </div>
+  </div>
+
+  <!-- LOGICAL CREATE / ASSIGN TASK MODAL -->
+  <div class="korpus-modal-overlay" id="task-modal-overlay">
+    <div class="korpus-modal-frame" style="max-width: 520px;">
+      <div class="modal-top-bar">
+        <div class="modal-id">ASSIGN NEW TASK</div>
+        <button class="modal-close" id="btn-close-task-modal">✕</button>
+      </div>
+      
+      <form id="task-form" class="korpus-form">
+        <input type="hidden" id="form-task-id">
+        
+        <div class="form-title" id="task-modal-title" style="margin-bottom: 8px;">Assign Work</div>
+        <p style="font-size: 0.9rem; color: var(--ink-muted); margin-bottom: 22px;">Assign what needs to be done and how many days they have to complete it.</p>
+
+        <div class="form-grid" style="grid-template-columns: 1fr; gap:16px;">
+          <div class="form-cell">
+            <label for="task-title" style="font-size: 0.9rem; font-weight:800;">What needs to be done? *</label>
+            <input type="text" id="task-title" placeholder="e.g. Fix login issue on mobile" style="font-size: 1.05rem; padding: 12px; font-weight:700;" required autofocus>
+          </div>
+
+          <div class="form-cell">
+            <label for="task-assignee" style="font-size: 0.9rem; font-weight:800;">Assign To Teammate *</label>
+            <select id="task-assignee" style="font-size: 1rem; padding: 12px; font-weight:700;" required>
+              <option value="MEM-1">Arman (Product & Strategy)</option>
+              <option value="MEM-2">Sadman (Design & UI)</option>
+              <option value="MEM-3">Adnan (Full-Stack Engineer)</option>
+              <option value="MEM-4">Faheem (Systems & Growth)</option>
+            </select>
+          </div>
+
+          <div class="form-cell">
+            <label for="task-days" style="font-size: 0.9rem; font-weight:800; color:var(--orange);">Time Allowed to Complete *</label>
+            <select id="task-days" style="font-size: 0.95rem; padding: 12px; font-weight:700; border-color:var(--orange);" required>
+              <option value="1">1 Day (Within 24 Hours)</option>
+              <option value="2">2 Days</option>
+              <option value="3" selected>3 Days (Standard Sprint)</option>
+              <option value="5">5 Days</option>
+              <option value="7">1 Week</option>
+            </select>
+          </div>
+
+          <div class="form-cell">
+            <label for="task-desc" style="font-size: 0.82rem; color: var(--ink-muted); font-weight:700;">Additional Context / Notes (Optional)</label>
+            <textarea id="task-desc" rows="2" placeholder="Any details needed to complete this task..."></textarea>
+          </div>
+
+          <input type="hidden" id="task-priority" value="Medium">
+          <input type="hidden" id="task-status" value="Todo">
+        </div>
+
+        <div class="form-actions" style="margin-top: 24px;">
+          <button type="button" class="korpus-btn korpus-btn-ghost" id="btn-cancel-task-modal">Cancel</button>
+          <button type="submit" class="korpus-btn korpus-btn-orange" id="btn-submit-task" style="font-size:1rem; padding:12px 24px;">Assign Task →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TASK DETAIL & COMMENT DRAWER -->
+  <div class="korpus-drawer-overlay" id="task-detail-overlay">
+    <div class="korpus-drawer-panel">
+      <div class="drawer-top-bar">
+        <span class="drawer-code" id="drawer-task-code">TASK DETAILS</span>
+        <button class="drawer-close" id="btn-close-task-drawer">✕</button>
+      </div>
+      <div class="drawer-content" id="task-drawer-content">
+        <!-- Injected via app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TELEMETRY TOAST NOTIFICATIONS -->
+  <div class="korpus-toast-container" id="toast-container"></div>
+
+  <script src="api.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

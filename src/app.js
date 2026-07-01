@@ -28,13 +28,18 @@ app.use(cookieParser(config.COOKIE_SECRET));
 // API Routes Mount
 app.use('/api/v1', apiRoutes);
 
-// Serve Frontend Static Files seamlessly from project root
+// Serve Frontend Static Files seamlessly from public or root directory
 const rootDir = process.cwd();
+const publicDir = path.join(rootDir, 'public');
+app.use(express.static(publicDir));
 app.use(express.static(rootDir));
 app.use(express.static(path.join(__dirname, '..')));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(rootDir, 'index.html'));
+  const htmlPath = require('fs').existsSync(path.join(publicDir, 'index.html'))
+    ? path.join(publicDir, 'index.html')
+    : path.join(rootDir, 'index.html');
+  res.sendFile(htmlPath);
 });
 
 // 404 Route Handler
