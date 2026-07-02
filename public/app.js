@@ -174,6 +174,27 @@ function getActivePeer() {
   return state.members.find(m => m.id === state.activeUserId) || state.members[0];
 }
 
+function computeMemberMinutesToday(mem) {
+  let mins = mem.totalMinutesToday || 0;
+  if (mem.clockStatus === 'IN' && mem.lastClockIn) {
+    const elapsedMins = Math.max(0, Math.floor((new Date() - new Date(mem.lastClockIn)) / 60000));
+    if (elapsedMins > mins) mins = elapsedMins;
+  }
+  return mins;
+}
+
+function getRelativeTime(dateStr) {
+  if (!dateStr) return 'Just now';
+  const diffSec = Math.floor((new Date() - new Date(dateStr)) / 1000);
+  if (diffSec < 60) return `${Math.max(1, diffSec)}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
 function canModifyTask(task) {
   const peer = getActivePeer();
   if (!peer) return false;
@@ -320,6 +341,31 @@ function setupEventListeners() {
       updateHeaderUser();
     }
   }, 3500);
+
+  // Live Active Clock-In Minute Updater (Runs every 2 minutes / 120 seconds)
+  if (window.liveClockTickInterval) clearInterval(window.liveClockTickInterval);
+  window.liveClockTickInterval = setInterval(() => {
+    let updatedAny = false;
+    const now = new Date();
+    state.members.forEach(mem => {
+      if (mem.clockStatus === 'IN' && mem.lastClockIn) {
+        const elapsedMins = Math.max(1, Math.round((now - new Date(mem.lastClockIn)) / 60000));
+        if (elapsedMins > (mem.totalMinutesToday || 0)) {
+          mem.totalMinutesToday = elapsedMins;
+          updatedAny = true;
+          if (window.ApiClient && ApiClient.getToken()) {
+            ApiClient.updateClockStatus(mem.mongoId || mem.email || mem.name, mem.clockStatus, mem.lastClockIn, mem.lastClockOut, mem.totalMinutesToday).catch(()=>{});
+          }
+        }
+      }
+    });
+    if (updatedAny) {
+      saveCollaborativeState(state);
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+      if (!isTyping) renderCurrentView();
+    }
+  }, 120000);
 }
 
 /* ==========================================================================
@@ -357,11 +403,13 @@ function renderCurrentView() {
 }
 
 function formatTimeBadge(task) {
+  const relTime = getRelativeTime(task.updatedAt);
+  const exactTime = new Date(task.updatedAt || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   if (task.status === 'Completed') {
-    return `<span style="color:var(--emerald); font-weight:800;">✓ COMPLETED</span>`;
+    return `<span style="color:var(--emerald); font-weight:800;" title="Finished at ${exactTime}">✓ COMPLETED (${relTime} • ${exactTime})</span>`;
   }
   const days = task.daysAllowed || 3;
-  return `<span style="color:var(--orange); font-weight:800;">⏳ ${days} Day${days > 1 ? 's' : ''} Allowed</span>`;
+  return `<span style="color:var(--orange); font-weight:800;" title="Updated at ${exactTime}">⏳ ${days}d Allowed • Upd: ${relTime} (${exactTime})</span>`;
 }
 
 /* VIEW 1: DASHBOARD */
@@ -399,8 +447,8 @@ function renderDashboard(container) {
             <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY'}</div>
             <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
               ${peer.clockStatus === 'IN' 
-                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Logged time today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` 
-                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` : 'Ready to start your work shift? Click Clock In!')}
+                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Logged time today: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m` : 'Ready to start your work shift? Click Clock In!')}
             </div>
           </div>
         </div>
@@ -875,8 +923,8 @@ function renderAttendancePage(container) {
             <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY'}</div>
             <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
               ${peer.clockStatus === 'IN' 
-                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Logged time today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` 
-                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor((peer.totalMinutesToday || 0)/60)}h ${(peer.totalMinutesToday || 0)%60}m` : 'Ready to start your work shift? Click Clock In!')}
+                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Logged time today: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Total worked today: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m` : 'Ready to start your work shift? Click Clock In!')}
             </div>
           </div>
         </div>
@@ -912,7 +960,7 @@ function renderAttendancePage(container) {
             <div style="font-size:0.8rem; font-weight:700; color:#444; line-height:1.5;">
               <div>Clock In: ${m.lastClockIn ? new Date(m.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'}</div>
               <div>Clock Out: ${(m.clockStatus === 'IN' || !m.lastClockOut) ? '--:--' : new Date(m.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-              <div style="margin-top:6px; font-weight:800; color:#000;">Total Today: ${Math.floor((m.totalMinutesToday || 0)/60)}h ${(m.totalMinutesToday || 0)%60}m</div>
+              <div style="margin-top:6px; font-weight:800; color:#000;">Total Today: ${Math.floor(computeMemberMinutesToday(m)/60)}h ${computeMemberMinutesToday(m)%60}m</div>
             </div>
             <div style="margin-top:12px; display:flex; gap:6px;">
               ${m.id === peer.id ? (m.clockStatus === 'IN' ? `
