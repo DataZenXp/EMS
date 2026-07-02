@@ -404,12 +404,11 @@ function renderCurrentView() {
 
 function formatTimeBadge(task) {
   const relTime = getRelativeTime(task.updatedAt);
-  const exactTime = new Date(task.updatedAt || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   if (task.status === 'Completed') {
-    return `<span style="color:var(--emerald); font-weight:800;" title="Finished at ${exactTime}">✓ COMPLETED (${relTime} • ${exactTime})</span>`;
+    return `<span style="color:var(--emerald); font-weight:800; font-size:0.78rem;">✓ COMPLETED • ${relTime}</span>`;
   }
   const days = task.daysAllowed || 3;
-  return `<span style="color:var(--orange); font-weight:800;" title="Updated at ${exactTime}">⏳ ${days}d Allowed • Upd: ${relTime} (${exactTime})</span>`;
+  return `<span style="color:var(--orange); font-weight:800; font-size:0.78rem;">⏳ ${days}d Allowed • ${relTime}</span>`;
 }
 
 /* VIEW 1: DASHBOARD */
@@ -654,21 +653,31 @@ function renderTaskCard(task) {
     nextActionHtml = `<span style="font-size:0.75rem; color:var(--emerald); font-weight:800;">✓ Finished</span>`;
   }
 
+  const topBadgeHtml = task.status === 'Completed' ?
+    `<span style="font-size:0.72rem; color:var(--emerald); font-weight:800; background:#E6F4EA; padding:3px 8px; border:1px solid #000;">✓ COMPLETED</span>` :
+    `<span style="font-size:0.72rem; color:#D97706; font-weight:800; background:#FEF3C7; padding:3px 8px; border:1px solid #000;">⏳ ${task.daysAllowed || 3}d Allowed</span>`;
+
   return `
-    <div class="task-card" onclick="openTaskDetail('${task.id}')">
-      <div class="task-card-top">
-        <span class="task-id" title="${task.id}">${formatDisplayId(task.id)}</span>
-        ${formatTimeBadge(task)}
+    <div class="task-card" onclick="openTaskDetail('${task.id}')" style="display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <div class="task-card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span class="task-id" title="${task.id}" style="font-weight:800; color:var(--ink-muted); font-size:0.8rem;">${formatDisplayId(task.id)}</span>
+          ${topBadgeHtml}
+        </div>
+        <div class="task-title" style="font-size:1.02rem; font-weight:800; line-height:1.35; margin-bottom:14px;">${task.title}</div>
       </div>
 
-      <div class="task-title">${task.title}</div>
-
-      <div class="task-meta-foot">
-        <div class="assignee-chip">
-          <div class="assignee-avatar">${initials}</div>
-          <span>${assignee.name}</span>
+      <div class="task-meta-foot" style="display:flex; flex-direction:column; gap:10px; border-top:1.5px dashed #E5E5EA; padding-top:12px; margin-top:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div class="assignee-chip">
+            <div class="assignee-avatar">${initials}</div>
+            <span style="font-weight:800; font-size:0.8rem;">${assignee.name}</span>
+          </div>
+          <div>${nextActionHtml}</div>
         </div>
-        <div>${nextActionHtml}</div>
+        <div style="font-size:0.73rem; font-weight:800; color:var(--ink-muted); text-align:right;">
+          ⏱ Updated ${getRelativeTime(task.updatedAt)}
+        </div>
       </div>
     </div>
   `;
