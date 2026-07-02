@@ -271,13 +271,55 @@ function setupEventListeners() {
 
   const btnCloseDrawer = document.getElementById('btn-close-task-drawer');
   if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', closeTaskDrawer);
-
   const drawerOverlay = document.getElementById('task-detail-overlay');
   if (drawerOverlay) {
     drawerOverlay.addEventListener('click', (e) => {
       if (e.target.id === 'task-detail-overlay') closeTaskDrawer();
     });
   }
+
+  // Live cross-tab synchronization
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ems_collaborative_data' && state.activeUserId) {
+      state = getCollaborativeState();
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+      const isModalOpen = document.getElementById('task-modal-overlay')?.style.display === 'flex';
+      if (!isTyping && !isModalOpen) {
+        renderCurrentView();
+      }
+      updateHeaderUser();
+    }
+  });
+
+  // Live real-time background polling engine across network
+  if (window.livePollingInterval) clearInterval(window.livePollingInterval);
+  window.livePollingInterval = setInterval(async () => {
+    if (!state.activeUserId || !window.ApiClient || !ApiClient.getToken()) return;
+
+    const prevSnapshot = JSON.stringify({
+      members: state.members.map(m => ({ id: m.id, status: m.clockStatus, mins: m.totalMinutesToday })),
+      tasks: state.tasks.map(t => ({ id: t.id, status: t.status, assignedTo: t.assignedTo, commentsCount: t.comments?.length }))
+    });
+
+    await syncRemoteData();
+
+    const newSnapshot = JSON.stringify({
+      members: state.members.map(m => ({ id: m.id, status: m.clockStatus, mins: m.totalMinutesToday })),
+      tasks: state.tasks.map(t => ({ id: t.id, status: t.status, assignedTo: t.assignedTo, commentsCount: t.comments?.length }))
+    });
+
+    if (prevSnapshot !== newSnapshot) {
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+      const isModalOpen = document.getElementById('task-modal-overlay')?.style.display === 'flex';
+
+      if (!isTyping && !isModalOpen) {
+        renderCurrentView();
+      }
+      updateHeaderUser();
+    }
+  }, 3500);
 }
 
 /* ==========================================================================
