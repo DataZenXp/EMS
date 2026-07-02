@@ -25,10 +25,14 @@ function refreshIcons() {
 async function syncRemoteData() {
   if (!window.ApiClient || !ApiClient.getToken()) return;
   try {
-    const teamOverview = await ApiClient.getTeamOverview();
+    const [teamOverview, remoteTasks] = await Promise.all([
+      ApiClient.getTeamOverview().catch(() => null),
+      ApiClient.getTasks().catch(() => null)
+    ]);
+
     if (teamOverview && Array.isArray(teamOverview)) {
       teamOverview.forEach(item => {
-        const mem = state.members.find(m => m.email === item.user.email || m.name === item.user.name);
+        const mem = state.members.find(m => m.email === item.user?.email || m.name === item.user?.name);
         if (mem) {
           mem.mongoId = item.user._id;
           if (item.user.clockStatus) mem.clockStatus = item.user.clockStatus;
@@ -37,10 +41,7 @@ async function syncRemoteData() {
           if (item.user.totalMinutesToday !== undefined) mem.totalMinutesToday = item.user.totalMinutesToday;
         }
       });
-      saveCollaborativeState(state);
     }
-
-    const remoteTasks = await ApiClient.getTasks();
     if (remoteTasks && Array.isArray(remoteTasks)) {
       state.tasks = remoteTasks.map(rt => {
         const assignedMember = state.members.find(m => m.name === rt.assignedTo?.name || m.mongoId === rt.assignedTo?._id || m.id === rt.assignedTo) || state.members[0];
@@ -120,20 +121,18 @@ async function handleLoginSubmit(e) {
   state.activeUserId = member.id;
   saveCollaborativeState(state);
 
-  try {
-    if (window.ApiClient) {
-      const loggedInUser = await ApiClient.login(member.email, pinInput);
-      if (loggedInUser) {
-        console.log('[Login]: API login success for', loggedInUser.name || member.name);
-      }
-      await syncRemoteData();
-    }
-  } catch (err) {
-    console.warn('[Login]: Live backend API login failed, using offline mode:', err.message);
-  }
-
-  await checkAuthenticationState();
+  // Instantly unlock workspace in 0 milliseconds!
+  checkAuthenticationState();
   showToast(`✦ Welcome back, ${member.name}!`);
+
+  // Perform network sync asynchronously in the background
+  if (window.ApiClient) {
+    ApiClient.login(member.email, pinInput).then(() => {
+      syncRemoteData().then(() => renderCurrentView());
+    }).catch(err => {
+      console.warn('[Login]: Background API login notice:', err?.message);
+    });
+  }
 }
 
 async function handleUserLogout() {
@@ -1031,21 +1030,6 @@ async function reassignTask(taskId, newAssigneeId) {
   const targetPeer = state.members.find(m => m.id === newAssigneeId);
   const isDrawerOpen = document.getElementById('task-detail-overlay')?.style.display === 'flex';
 
-  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
-    try {
-      if (targetPeer?.mongoId) {
-        await ApiClient.assignTask(taskId, targetPeer.mongoId);
-        await syncRemoteData();
-        if (isDrawerOpen) openTaskDetail(taskId);
-        renderCurrentView();
-        showToast(`✦ Reassigned to ${targetPeer.name}`);
-        return;
-      }
-    } catch (e) {
-      console.warn('Backend reassign error, updating locally.');
-    }
-  }
-
   task.assignedTo = newAssigneeId;
   task.updatedAt = new Date().toISOString();
 
@@ -1056,7 +1040,16 @@ async function reassignTask(taskId, newAssigneeId) {
   updateHeaderUser();
   if (isDrawerOpen) openTaskDetail(taskId);
   renderCurrentView();
-  showToast(`✦ Reassigned to ${targetPeer.name}`);
+  showToast(`✦ Reassigned to ${targetPeer ? targetPeer.name : 'Teammate'}`);
+
+  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
+    if (targetPeer?.mongoId) {
+      ApiClient.assignTask(taskId, targetPeer.mongoId).then(() => syncRemoteData().then(() => {
+        if (document.getElementById('task-detail-overlay')?.style.display === 'flex') openTaskDetail(taskId);
+        renderCurrentView();
+      })).catch(() => {});
+    }
+  }
 }
 
 async function shiftTaskStatus(taskId, newStatus) {
@@ -1071,19 +1064,7 @@ async function shiftTaskStatus(taskId, newStatus) {
   const peer = getActivePeer();
   const isDrawerOpen = document.getElementById('task-detail-overlay')?.style.display === 'flex';
 
-  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
-    try {
-      await ApiClient.updateTaskStatus(taskId, newStatus);
-      await syncRemoteData();
-      if (isDrawerOpen) openTaskDetail(taskId);
-      renderCurrentView();
-      showToast(`✦ Status moved to ${newStatus}`);
-      return;
-    } catch (e) {
-      console.warn('Backend status update error, updating locally.');
-    }
-  }
-
+  // Instantly update local state and screen in 0ms!
   task.status = newStatus;
   task.updatedAt = new Date().toISOString();
   if (newStatus === 'Completed') {
@@ -1098,6 +1079,14 @@ async function shiftTaskStatus(taskId, newStatus) {
   if (isDrawerOpen) openTaskDetail(taskId);
   renderCurrentView();
   showToast(`✦ Status moved to ${newStatus}`);
+
+  // Sync background API asynchronously
+  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
+    ApiClient.updateTaskStatus(taskId, newStatus).then(() => syncRemoteData().then(() => {
+      if (document.getElementById('task-detail-overlay')?.style.display === 'flex') openTaskDetail(taskId);
+      renderCurrentView();
+    })).catch(() => {});
+  }
 }
 
 async function addCommentToTask(e, taskId) {
@@ -1107,19 +1096,6 @@ async function addCommentToTask(e, taskId) {
   if (!text) return;
 
   const isDrawerOpen = document.getElementById('task-detail-overlay')?.style.display === 'flex';
-
-  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
-    try {
-      await ApiClient.addComment(taskId, text);
-      if (input) input.value = '';
-      await syncRemoteData();
-      if (isDrawerOpen) openTaskDetail(taskId);
-      renderCurrentView();
-      return;
-    } catch (err) {
-      console.warn('Backend comment error, saving locally.');
-    }
-  }
 
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
@@ -1134,13 +1110,19 @@ async function addCommentToTask(e, taskId) {
     text: text,
     timestamp: nowStr
   });
-
   task.timeline.push({ text: `${peer.name} left a comment`, timestamp: nowStr });
 
+  if (input) input.value = '';
   saveCollaborativeState(state);
-  updateHeaderUser();
   if (isDrawerOpen) openTaskDetail(taskId);
   renderCurrentView();
+
+  if (window.ApiClient && ApiClient.getToken() && !taskId.startsWith('TSK-')) {
+    ApiClient.addComment(taskId, text).then(() => syncRemoteData().then(() => {
+      if (document.getElementById('task-detail-overlay')?.style.display === 'flex') openTaskDetail(taskId);
+      renderCurrentView();
+    })).catch(() => {});
+  }
 }
 
 /* CREATE / ASSIGN TASK MODAL */
@@ -1175,28 +1157,7 @@ async function handleTaskSubmit(e) {
   const assignedTo = document.getElementById('task-assignee').value;
   const daysAllowed = parseInt(document.getElementById('task-days').value) || 3;
 
-  if (window.ApiClient && ApiClient.getToken()) {
-    try {
-      const targetMember = state.members.find(m => m.id === assignedTo) || peer;
-      if (targetMember?.mongoId) {
-        await ApiClient.createTask({
-          title,
-          description: description || title,
-          priority: 'Medium',
-          assignedTo: targetMember.mongoId,
-          dueDate: new Date(Date.now() + daysAllowed * 86400000).toISOString()
-        });
-        closeTaskModal();
-        await syncRemoteData();
-        renderCurrentView();
-        showToast(`✦ Created task on Live Backend`);
-        return;
-      }
-    } catch (err) {
-      console.warn('Remote task creation failed, saving locally.');
-    }
-  }
-
+  const targetMember = state.members.find(m => m.id === assignedTo) || peer;
   const nowStr = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
   const newId = `TSK-${Math.floor(100 + Math.random() * 899)}`;
 
@@ -1214,28 +1175,28 @@ async function handleTaskSubmit(e) {
     attachments: [],
     comments: [],
     timeline: [
-      { text: `${peer.name} assigned task (${daysAllowed} Days Allowed)`, timestamp: nowStr }
+      { text: `Task assigned to ${state.members.find(m => m.id === assignedTo)?.name || 'Teammate'}`, timestamp: nowStr }
     ]
   };
 
   state.tasks.unshift(newTask);
-
-  if (assignedTo !== peer.id) {
-    state.notifications.unshift({
-      id: `NT-${Date.now()}`,
-      type: 'assigned',
-      title: 'New Task Assigned',
-      message: `${peer.name} assigned new task '${title}' (${daysAllowed} Days Allowed).`,
-      targetMemberId: assignedTo,
-      timestamp: 'Just now',
-      read: false
-    });
-  }
-
   saveCollaborativeState(state);
-  updateHeaderUser();
   closeTaskModal();
+  updateHeaderUser();
   renderCurrentView();
+  showToast(`✦ Created task "${title}"`);
+
+  if (window.ApiClient && ApiClient.getToken()) {
+    if (targetMember?.mongoId) {
+      ApiClient.createTask({
+        title,
+        description: description || title,
+        priority: 'Medium',
+        assignedTo: targetMember.mongoId,
+        dueDate: new Date(Date.now() + daysAllowed * 86400000).toISOString()
+      }).then(() => syncRemoteData().then(() => renderCurrentView())).catch(() => {});
+    }
+  }
   showToast(`✦ Assigned task to ${state.members.find(m=>m.id===assignedTo)?.name || 'teammate'}`);
 }
 
