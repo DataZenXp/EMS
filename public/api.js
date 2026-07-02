@@ -141,6 +141,14 @@ class ApiClient {
     return res.data?.user;
   }
 
+  static async updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday) {
+    const res = await this.request('/dashboard/clock-status', {
+      method: 'PUT',
+      body: JSON.stringify({ identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday })
+    });
+    return res.data?.user;
+  }
+
   /* NOTIFICATIONS */
   static async getNotifications() {
     const res = await this.request('/notifications');

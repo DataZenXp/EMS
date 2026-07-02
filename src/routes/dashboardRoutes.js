@@ -15,5 +15,6 @@ router.get('/due-today', DashboardController.getDueTodayTasks);
 router.get('/team-overview', DashboardController.getTeamOverview);
 router.get('/recent-activity', DashboardController.getRecentActivity);
 router.put('/member-availability', DashboardController.updateMemberAvailability);
+router.put('/clock-status', DashboardController.updateClockStatus);
 
 module.exports = router;

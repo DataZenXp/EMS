@@ -79,6 +79,7 @@ function getCollaborativeState() {
           delete m.role;
           delete m.bio;
           if (!m.clockStatus) m.clockStatus = 'OUT';
+          if (m.clockStatus === 'IN') m.lastClockOut = null;
           if (m.lastClockIn === undefined) m.lastClockIn = null;
           if (m.lastClockOut === undefined) m.lastClockOut = null;
           if (m.totalMinutesToday === undefined) m.totalMinutesToday = 0;

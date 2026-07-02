@@ -32,6 +32,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'Available',
       enum: ['Available', 'In Deep Work', 'Out of Office']
+    },
+    clockStatus: {
+      type: String,
+      default: 'OUT',
+      enum: ['IN', 'OUT']
+    },
+    lastClockIn: {
+      type: Date,
+      default: null
+    },
+    lastClockOut: {
+      type: Date,
+      default: null
+    },
+    totalMinutesToday: {
+      type: Number,
+      default: 0
     }
   },
   {
