@@ -38,7 +38,14 @@ async function syncRemoteData() {
           if (item.user.clockStatus) mem.clockStatus = item.user.clockStatus;
           if (item.user.lastClockIn !== undefined) mem.lastClockIn = item.user.lastClockIn;
           if (item.user.lastClockOut !== undefined) mem.lastClockOut = item.user.lastClockOut;
-          if (item.user.totalMinutesToday !== undefined) mem.totalMinutesToday = item.user.totalMinutesToday;
+          if (item.user.totalMinutesToday !== undefined) {
+            if (item.user.clockStatus === 'IN' && item.user.lastClockIn) {
+              const elapsed = Math.max(0, Math.floor((new Date() - new Date(item.user.lastClockIn)) / 60000));
+              mem.totalMinutesToday = Math.max(item.user.totalMinutesToday, elapsed);
+            } else {
+              mem.totalMinutesToday = item.user.totalMinutesToday;
+            }
+          }
         }
       });
     }
@@ -342,7 +349,7 @@ function setupEventListeners() {
     }
   }, 3500);
 
-  // Live Active Clock-In Minute Updater (Runs every 2 minutes / 120 seconds)
+  // Live Active Clock-In Minute Updater (Runs every 5 minutes / 300,000 seconds)
   if (window.liveClockTickInterval) clearInterval(window.liveClockTickInterval);
   window.liveClockTickInterval = setInterval(() => {
     let updatedAny = false;
@@ -365,7 +372,7 @@ function setupEventListeners() {
       const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
       if (!isTyping) renderCurrentView();
     }
-  }, 120000);
+  }, 300000);
 }
 
 /* ==========================================================================
