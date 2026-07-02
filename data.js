@@ -49,63 +49,7 @@ const INITIAL_COLLABORATIVE_DATA = {
       totalMinutesToday: 0
     }
   ],
-  tasks: [
-    {
-      id: 'TSK-101',
-      title: 'Setup secure PIN login & permission lock',
-      description: 'Ensure only logged-in account holders can update their assigned tasks to prevent chaos.',
-      priority: 'High',
-      status: 'In Progress',
-      daysAllowed: 2,
-      createdBy: 'MEM-1',
-      assignedTo: 'MEM-1',
-      createdAt: '2026-07-01T09:00:00Z',
-      updatedAt: '2026-07-01T11:00:00Z',
-      attachments: [],
-      comments: [
-        { id: 'C-1', authorId: 'MEM-1', authorName: 'Arman', text: 'Locking edit permissions so no one accidentally marks others tasks complete.', timestamp: '10:30 AM' }
-      ],
-      timeline: [
-        { text: 'Arman created task (2 Days Allowed)', timestamp: '09:00 AM' },
-        { text: 'Arman started progress', timestamp: '10:30 AM' }
-      ]
-    },
-    {
-      id: 'TSK-102',
-      title: 'Design Neo-Brutalist Login Screen',
-      description: 'Create a clean, secure PIN entry card for Arman, Sadman, Adnan, and Faheem.',
-      priority: 'High',
-      status: 'Review',
-      daysAllowed: 3,
-      createdBy: 'MEM-1',
-      assignedTo: 'MEM-2',
-      createdAt: '2026-07-01T08:30:00Z',
-      updatedAt: '2026-07-01T10:45:00Z',
-      attachments: [],
-      comments: [],
-      timeline: [
-        { text: 'Arman assigned task to Sadman (3 Days Allowed)', timestamp: '08:30 AM' },
-        { text: 'Sadman moved to Review', timestamp: '10:45 AM' }
-      ]
-    },
-    {
-      id: 'TSK-103',
-      title: 'Verify automatic cleanup for expired completed work',
-      description: 'Test that completed items properly stay visible and clean up after deadline window.',
-      priority: 'Medium',
-      status: 'Todo',
-      daysAllowed: 3,
-      createdBy: 'MEM-3',
-      assignedTo: 'MEM-4',
-      createdAt: '2026-07-01T09:15:00Z',
-      updatedAt: '2026-07-01T09:15:00Z',
-      attachments: [],
-      comments: [],
-      timeline: [
-        { text: 'Adnan assigned task to Faheem (3 Days Allowed)', timestamp: '09:15 AM' }
-      ]
-    }
-  ],
+  tasks: [],
   notifications: [
     {
       id: 'NT-1',
@@ -139,6 +83,12 @@ function getCollaborativeState() {
           if (m.lastClockOut === undefined) m.lastClockOut = null;
           if (m.totalMinutesToday === undefined) m.totalMinutesToday = 0;
         });
+      }
+      if (parsed.tasks && Array.isArray(parsed.tasks)) {
+        parsed.tasks = parsed.tasks.filter(t => 
+          !['TSK-101', 'TSK-102', 'TSK-103'].includes(t.id) &&
+          !['Setup secure PIN login & permission lock', 'Design Neo-Brutalist Login Screen', 'Verify automatic cleanup for expired completed work'].includes(t.title)
+        );
       }
       return parsed;
     } catch (e) {

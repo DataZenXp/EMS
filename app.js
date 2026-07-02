@@ -63,7 +63,7 @@ async function syncRemoteData() {
             { text: `Synchronized with live MongoDB backend`, timestamp: new Date(rt.updatedAt || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }
           ]
         };
-      });
+      }).filter(t => !['Setup secure PIN login & permission lock', 'Design Neo-Brutalist Login Screen', 'Verify automatic cleanup for expired completed work'].includes(t.title));
       saveCollaborativeState(state);
     }
   } catch (err) {
