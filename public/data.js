@@ -1,6 +1,6 @@
 /* ==========================================================================
    TASKGRID // STARTUP LOGICAL CONTROLLER WITH SECURE PIN AUTHENTICATION
-   TEAM MEMBERS: ARMAN, SADMAN, ADNAN, FAHEEM
+   TEAM MEMBERS: ARMAN, SADHMAN, ADNAN, FAHEEM
    ========================================================================== */
 
 const COLLAB_STORAGE_KEY = 'taskgrid_4node_secure_v2';
@@ -20,8 +20,8 @@ const INITIAL_COLLABORATIVE_DATA = {
     },
     {
       id: 'MEM-2',
-      name: 'Sadman',
-      email: 'sadman@startup.io',
+      name: 'Sadhman',
+      email: 'sadhman@startup.io',
       pin: 'Awaazfmdie',
       clockStatus: 'OUT',
       lastClockIn: null,
@@ -63,7 +63,7 @@ const INITIAL_COLLABORATIVE_DATA = {
   ],
   attendanceLogs: [
     { id: 'LOG-1', userId: 'MEM-1', userName: 'Arman', action: 'CLOCK_IN', timestamp: new Date(Date.now() - 3600000 * 4).toISOString() },
-    { id: 'LOG-2', userId: 'MEM-2', userName: 'Sadman', action: 'CLOCK_IN', timestamp: new Date(Date.now() - 3600000 * 3.5).toISOString() }
+    { id: 'LOG-2', userId: 'MEM-2', userName: 'Sadhman', action: 'CLOCK_IN', timestamp: new Date(Date.now() - 3600000 * 3.5).toISOString() }
   ]
 };
 
@@ -75,6 +75,10 @@ function getCollaborativeState() {
       if (!parsed.attendanceLogs) parsed.attendanceLogs = [];
       if (parsed.members && Array.isArray(parsed.members)) {
         parsed.members.forEach(m => {
+          if (m.name === 'Sadman') {
+            m.name = 'Sadhman';
+            if (m.email === 'sadman@startup.io') m.email = 'sadhman@startup.io';
+          }
           m.pin = 'Awaazfmdie';
           delete m.role;
           delete m.bio;
@@ -83,6 +87,11 @@ function getCollaborativeState() {
           if (m.lastClockIn === undefined) m.lastClockIn = null;
           if (m.lastClockOut === undefined) m.lastClockOut = null;
           if (m.totalMinutesToday === undefined) m.totalMinutesToday = 0;
+        });
+      }
+      if (parsed.attendanceLogs && Array.isArray(parsed.attendanceLogs)) {
+        parsed.attendanceLogs.forEach(l => {
+          if (l.userName === 'Sadman') l.userName = 'Sadhman';
         });
       }
       if (parsed.tasks && Array.isArray(parsed.tasks)) {

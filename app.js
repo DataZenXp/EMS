@@ -107,10 +107,10 @@ async function handleLoginSubmit(e) {
   state.members = freshMembers;
 
   const queryName = nameInput || idInput;
-  const member = state.members.find(m => m.name.toLowerCase() === queryName?.toLowerCase() || m.id === queryName);
+  const member = state.members.find(m => m.name.toLowerCase() === queryName?.toLowerCase() || (queryName?.toLowerCase() === 'sadman' && m.name === 'Sadhman') || m.id === queryName);
   if (!member || (pinInput !== member.pin && pinInput !== 'Awaazfmdie')) {
     if (errBox) {
-      errBox.textContent = '✕ Invalid teammate name or incorrect passcode. Use: Arman, Sadman, Adnan, or Faheem';
+      errBox.textContent = '✕ Invalid teammate name or incorrect passcode. Use: Arman, Sadhman, Adnan, or Faheem';
       errBox.style.display = 'block';
     }
     return;
@@ -754,9 +754,20 @@ async function dismissNotif(id) {
 }
 
 /* WORK SHIFTS / ATTENDANCE CLOCK IN & CLOCK OUT */
+function setShiftFilter(val) {
+  window.currentShiftFilter = val;
+  renderCurrentView();
+}
+
 async function toggleClockStatus(userId, action) {
   const mem = state.members.find(m => m.id === userId);
   if (!mem) return;
+
+  const peer = getActivePeer();
+  if (peer && peer.id !== userId) {
+    showToast(`🔒 Only ${mem.name} can change their own shift clock status!`);
+    return;
+  }
 
   const now = new Date();
   if (action === 'IN') {
@@ -863,10 +874,12 @@ function renderAttendancePage(container) {
               <div style="margin-top:6px; font-weight:800; color:#000;">Total Today: ${Math.floor((m.totalMinutesToday || 0)/60)}h ${(m.totalMinutesToday || 0)%60}m</div>
             </div>
             <div style="margin-top:12px; display:flex; gap:6px;">
-              ${m.clockStatus === 'IN' ? `
+              ${m.id === peer.id ? (m.clockStatus === 'IN' ? `
                 <button class="korpus-btn" style="flex:1; padding:6px; background:#FF3B30; color:#FFF; font-size:0.75rem; font-weight:800;" onclick="toggleClockStatus('${m.id}', 'OUT')">Set Clock Out</button>
               ` : `
                 <button class="korpus-btn" style="flex:1; padding:6px; background:#00C865; color:#FFF; font-size:0.75rem; font-weight:800;" onclick="toggleClockStatus('${m.id}', 'IN')">Set Clock In</button>
+              `) : `
+                <div style="flex:1; padding:6px; text-align:center; font-size:0.72rem; font-weight:800; color:#666; background:#EEE; border:1px dashed #AAA;">🔒 Personal Clock (${m.name} only)</div>
               `}
             </div>
           </div>
@@ -876,13 +889,26 @@ function renderAttendancePage(container) {
 
     <!-- RECENT ATTENDANCE LOGS -->
     <div class="korpus-panel">
-      <div class="panel-header">
+      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <span>📋 Shift Activity & History Log</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="korpus-btn" style="padding:4px 10px; font-size:0.75rem; background:${(window.currentShiftFilter || 'ALL') === 'ALL' ? '#000' : '#FFF'}; color:${(window.currentShiftFilter || 'ALL') === 'ALL' ? '#FFF' : '#000'}; border:1.5px solid #000;" onclick="setShiftFilter('ALL')">All Team</button>
+          ${state.members.map(m => `
+            <button class="korpus-btn" style="padding:4px 10px; font-size:0.75rem; background:${(window.currentShiftFilter || 'ALL') === m.id || (window.currentShiftFilter || 'ALL').toLowerCase() === m.name.toLowerCase() ? '#000' : '#FFF'}; color:${(window.currentShiftFilter || 'ALL') === m.id || (window.currentShiftFilter || 'ALL').toLowerCase() === m.name.toLowerCase() ? '#FFF' : '#000'}; border:1.5px solid #000;" onclick="setShiftFilter('${m.id}')">${m.name}</button>
+          `).join('')}
+        </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:10px;">
-        ${(!state.attendanceLogs || state.attendanceLogs.length === 0) ? `
-          <div style="padding:24px; text-align:center; color:var(--ink-muted); font-weight:700;">No shift activity recorded yet today.</div>
-        ` : state.attendanceLogs.map(log => `
+        ${(() => {
+          const activeFilter = window.currentShiftFilter || 'ALL';
+          const logs = (!state.attendanceLogs ? [] : state.attendanceLogs).filter(l => {
+            if (activeFilter === 'ALL') return true;
+            return l.userId === activeFilter || l.userName?.toLowerCase() === activeFilter.toLowerCase();
+          });
+          if (logs.length === 0) {
+            return `<div style="padding:24px; text-align:center; color:var(--ink-muted); font-weight:700;">No shift activity matching this filter.</div>`;
+          }
+          return logs.map(log => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1.5px solid #000; background:#FFF;">
             <div style="display:flex; align-items:center; gap:12px;">
               <span style="font-size:1.3rem;">${log.action === 'CLOCK_IN' ? '▶️' : '⏹️'}</span>
@@ -895,7 +921,8 @@ function renderAttendancePage(container) {
               ${new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} (${new Date(log.timestamp).toLocaleDateString()})
             </div>
           </div>
-        `).join('')}
+        `).join('');
+        })()}
       </div>
     </div>
   `;
