@@ -141,10 +141,10 @@ class ApiClient {
     return res.data?.user;
   }
 
-  static async updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday) {
+  static async updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday, totalMinutesAllTime, lastClockDate) {
     const res = await this.request('/dashboard/clock-status', {
       method: 'PUT',
-      body: JSON.stringify({ identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday })
+      body: JSON.stringify({ identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday, totalMinutesAllTime, lastClockDate })
     });
     return res.data?.user;
   }

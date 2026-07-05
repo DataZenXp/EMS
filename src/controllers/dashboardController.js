@@ -88,8 +88,8 @@ class DashboardController {
 
   static async updateClockStatus(req, res, next) {
     try {
-      const { identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday } = req.body;
-      const user = await DashboardService.updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday);
+      const { identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday, totalMinutesAllTime, lastClockDate } = req.body;
+      const user = await DashboardService.updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday, totalMinutesAllTime, lastClockDate);
       return ApiResponse.success(res, statusCodes.OK, 'Clock status updated successfully', { user });
     } catch (error) {
       next(error);

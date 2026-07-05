@@ -56,7 +56,7 @@ class DashboardService {
   }
 
   static async getTeamOverview() {
-    const users = await User.find({}, 'name email avatar isOnline availability clockStatus lastClockIn lastClockOut totalMinutesToday');
+    const users = await User.find({}, 'name email avatar isOnline availability clockStatus lastClockIn lastClockOut totalMinutesToday totalMinutesAllTime lastClockDate');
     const allTasks = await Task.find({}, 'status assignedTo priority');
 
     return users.map(user => {
@@ -97,7 +97,7 @@ class DashboardService {
     return user;
   }
 
-  static async updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday) {
+  static async updateClockStatus(identifier, clockStatus, lastClockIn, lastClockOut, totalMinutesToday, totalMinutesAllTime, lastClockDate) {
     let user = null;
     if (identifier && identifier.match(/^[0-9a-fA-F]{24}$/)) {
       user = await User.findById(identifier);
@@ -110,6 +110,8 @@ class DashboardService {
     if (lastClockIn !== undefined) user.lastClockIn = lastClockIn;
     if (lastClockOut !== undefined) user.lastClockOut = lastClockOut;
     if (totalMinutesToday !== undefined) user.totalMinutesToday = totalMinutesToday;
+    if (totalMinutesAllTime !== undefined) user.totalMinutesAllTime = totalMinutesAllTime;
+    if (lastClockDate !== undefined) user.lastClockDate = lastClockDate;
     await user.save();
     return user;
   }

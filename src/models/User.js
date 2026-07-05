@@ -49,6 +49,14 @@ const userSchema = new mongoose.Schema(
     totalMinutesToday: {
       type: Number,
       default: 0
+    },
+    totalMinutesAllTime: {
+      type: Number,
+      default: 0
+    },
+    lastClockDate: {
+      type: String,
+      default: null
     }
   },
   {

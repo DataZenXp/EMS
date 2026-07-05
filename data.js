@@ -16,7 +16,9 @@ const INITIAL_COLLABORATIVE_DATA = {
       clockStatus: 'OUT',
       lastClockIn: null,
       lastClockOut: null,
-      totalMinutesToday: 0
+      totalMinutesToday: 0,
+      totalMinutesAllTime: 0,
+      lastClockDate: null
     },
     {
       id: 'MEM-2',
@@ -26,7 +28,9 @@ const INITIAL_COLLABORATIVE_DATA = {
       clockStatus: 'OUT',
       lastClockIn: null,
       lastClockOut: null,
-      totalMinutesToday: 0
+      totalMinutesToday: 0,
+      totalMinutesAllTime: 0,
+      lastClockDate: null
     },
     {
       id: 'MEM-3',
@@ -36,7 +40,9 @@ const INITIAL_COLLABORATIVE_DATA = {
       clockStatus: 'OUT',
       lastClockIn: null,
       lastClockOut: null,
-      totalMinutesToday: 0
+      totalMinutesToday: 0,
+      totalMinutesAllTime: 0,
+      lastClockDate: null
     },
     {
       id: 'MEM-4',
@@ -46,7 +52,9 @@ const INITIAL_COLLABORATIVE_DATA = {
       clockStatus: 'OUT',
       lastClockIn: null,
       lastClockOut: null,
-      totalMinutesToday: 0
+      totalMinutesToday: 0,
+      totalMinutesAllTime: 0,
+      lastClockDate: null
     }
   ],
   tasks: [],
@@ -87,6 +95,8 @@ function getCollaborativeState() {
           if (m.lastClockIn === undefined) m.lastClockIn = null;
           if (m.lastClockOut === undefined) m.lastClockOut = null;
           if (m.totalMinutesToday === undefined) m.totalMinutesToday = 0;
+          if (m.totalMinutesAllTime === undefined) m.totalMinutesAllTime = m.totalMinutesToday || 0;
+          if (m.lastClockDate === undefined) m.lastClockDate = null;
         });
       }
       if (parsed.attendanceLogs && Array.isArray(parsed.attendanceLogs)) {
