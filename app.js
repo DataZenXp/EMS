@@ -276,6 +276,17 @@ function computeMemberMinutesAllTime(mem) {
   return Math.max(mins, computeMemberMinutesToday(mem));
 }
 
+function formatAllTimeWorkReadable(mins) {
+  const totalMins = Math.max(0, Math.floor(mins || 0));
+  const hours = Math.floor(totalMins / 60);
+  const remMins = totalMins % 60;
+  if (hours < 8) {
+    return `${hours}h ${remMins}m`;
+  }
+  const workDays = (totalMins / 480).toFixed(1);
+  return `${hours}h ${remMins}m (~${workDays} work days)`;
+}
+
 function getRelativeTime(dateStr) {
   if (!dateStr) return 'Just now';
   const diffSec = Math.floor((new Date() - new Date(dateStr)) / 1000);
@@ -535,8 +546,8 @@ function renderDashboard(container) {
             <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY'}</div>
             <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
               ${peer.clockStatus === 'IN' 
-                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m` 
-                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m` : `Ready to start your work shift? Click Clock In! • Today's Work: 0h 0m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m`)}
+                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}` : `Ready to start your work shift? Click Clock In! • Today's Work: 0h 0m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}`)}
             </div>
           </div>
         </div>
@@ -1023,8 +1034,8 @@ function renderAttendancePage(container) {
             <div style="font-size:1.4rem; font-weight:900; font-family:var(--font-code);">${peer.clockStatus === 'IN' ? 'ON DUTY (WORKING)' : 'OFF DUTY'}</div>
             <div style="font-size:0.85rem; font-weight:700; color:#555; margin-top:2px;">
               ${peer.clockStatus === 'IN' 
-                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m` 
-                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m` : `Ready to start your work shift? Click Clock In! • Today's Work: 0h 0m • All-Time Work: ${Math.floor(computeMemberMinutesAllTime(peer)/60)}h ${computeMemberMinutesAllTime(peer)%60}m`)}
+                ? `Clocked in at ${peer.lastClockIn ? new Date(peer.lastClockIn).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}` 
+                : (peer.lastClockOut ? `Finished shift at ${new Date(peer.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • Today's Work: ${Math.floor(computeMemberMinutesToday(peer)/60)}h ${computeMemberMinutesToday(peer)%60}m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}` : `Ready to start your work shift? Click Clock In! • Today's Work: 0h 0m • All-Time Work: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(peer))}`)}
             </div>
           </div>
         </div>
@@ -1062,7 +1073,7 @@ function renderAttendancePage(container) {
               <div>Clock Out: ${(m.clockStatus === 'IN' || !m.lastClockOut) ? '--:--' : new Date(m.lastClockOut).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
               <div style="margin-top:6px; font-weight:800; color:#000;">
                 <div>Today: ${Math.floor(computeMemberMinutesToday(m)/60)}h ${computeMemberMinutesToday(m)%60}m</div>
-                <div style="font-size:0.85em; color:#555; margin-top:2px;">All-Time: ${Math.floor(computeMemberMinutesAllTime(m)/60)}h ${computeMemberMinutesAllTime(m)%60}m</div>
+                <div style="font-size:0.85em; color:#555; margin-top:2px;">All-Time: ${formatAllTimeWorkReadable(computeMemberMinutesAllTime(m))}</div>
               </div>
             </div>
             <div style="margin-top:12px; display:flex; gap:6px;">
