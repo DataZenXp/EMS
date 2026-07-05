@@ -193,6 +193,16 @@ function applyAttendanceRules(mem) {
     modified = true;
   }
 
+  const getDateStr = (d) => {
+    if (!d) return null;
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return null;
+    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+  };
+
+  const inDateStr = getDateStr(mem.lastClockIn);
+  const outDateStr = getDateStr(mem.lastClockOut);
+
   // Rule 1: Auto clock-off after 12 hours (720 minutes) if not turned off manually
   if (mem.clockStatus === 'IN' && mem.lastClockIn) {
     const clockInDate = new Date(mem.lastClockIn);
@@ -202,11 +212,11 @@ function applyAttendanceRules(mem) {
       const autoOutDate = new Date(clockInDate.getTime() + 720 * 60000);
       mem.lastClockOut = autoOutDate.toISOString();
       
-      const clockInDateStr = `${clockInDate.getFullYear()}-${String(clockInDate.getMonth() + 1).padStart(2, '0')}-${String(clockInDate.getDate()).padStart(2, '0')}`;
-      if (clockInDateStr === todayStr || !mem.lastClockDate || mem.lastClockDate === clockInDateStr) {
-        mem.totalMinutesToday = (mem.totalMinutesToday || 0) + 720;
+      if (inDateStr === todayStr || !mem.lastClockDate || mem.lastClockDate === inDateStr) {
+        mem.totalMinutesToday = Math.min(720, (mem.totalMinutesToday || 0) + 720);
       }
       mem.totalMinutesAllTime = (mem.totalMinutesAllTime || 0) + 720;
+      mem.lastClockDate = todayStr;
       
       if (typeof state !== 'undefined' && state.attendanceLogs) {
         state.attendanceLogs.unshift({
@@ -224,6 +234,9 @@ function applyAttendanceRules(mem) {
 
   // Rule 2: Reset today's time at night 12am (midnight)
   if (!mem.lastClockDate) {
+    if (mem.clockStatus === 'OUT' && inDateStr !== todayStr && outDateStr !== todayStr) {
+      mem.totalMinutesToday = 0;
+    }
     if (mem.lastClockOut || mem.lastClockIn) {
       const lastD = new Date(mem.lastClockOut || mem.lastClockIn);
       mem.lastClockDate = `${lastD.getFullYear()}-${String(lastD.getMonth() + 1).padStart(2, '0')}-${String(lastD.getDate()).padStart(2, '0')}`;
@@ -247,6 +260,13 @@ function applyAttendanceRules(mem) {
     modified = true;
   }
 
+  // Rule 2b: Self-healing check: if OFF DUTY and lastClockIn / lastClockOut did not happen today, today's work MUST be 0!
+  if (mem.clockStatus === 'OUT' && inDateStr !== todayStr && outDateStr !== todayStr && (mem.totalMinutesToday || 0) > 0) {
+    mem.totalMinutesToday = 0;
+    mem.lastClockDate = todayStr;
+    modified = true;
+  }
+
   // Logical sanity check: no single day can exceed 12 hours (720 minutes)
   if ((mem.totalMinutesToday || 0) > 720) {
     mem.totalMinutesToday = 720;
@@ -263,7 +283,7 @@ function computeMemberMinutesToday(mem) {
     const elapsedMins = Math.max(0, Math.floor((new Date() - new Date(mem.lastClockIn)) / 60000));
     mins += Math.min(elapsedMins, 720);
   }
-  return mins;
+  return Math.min(720, mins);
 }
 
 function computeMemberMinutesAllTime(mem) {

@@ -7,19 +7,49 @@ function applyBackendAttendanceRules(user) {
   if (!user) return false;
   let modified = false;
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const getDateStr = (d) => {
+    if (!d) return null;
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return null;
+    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+  };
+
+  const inDateStr = getDateStr(user.lastClockIn);
+  const outDateStr = getDateStr(user.lastClockOut);
 
   // 1. Midnight reset
   if (user.lastClockDate && user.lastClockDate !== todayStr) {
-    user.totalMinutesToday = 0;
-    user.lastClockDate = todayStr;
-    modified = true;
+    if (user.clockStatus === 'OUT') {
+      user.totalMinutesToday = 0;
+      user.lastClockDate = todayStr;
+      modified = true;
+    } else if (user.clockStatus === 'IN' && user.lastClockIn) {
+      user.totalMinutesToday = 0;
+      const midnightToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const yesterdayMins = Math.max(0, Math.floor((midnightToday.getTime() - new Date(user.lastClockIn).getTime()) / 60000));
+      user.totalMinutesAllTime = (user.totalMinutesAllTime || 0) + yesterdayMins;
+      user.lastClockIn = midnightToday;
+      user.lastClockDate = todayStr;
+      modified = true;
+    }
   } else if (!user.lastClockDate) {
+    if (user.clockStatus === 'OUT' && inDateStr !== todayStr && outDateStr !== todayStr) {
+      user.totalMinutesToday = 0;
+    }
     user.lastClockDate = todayStr;
     modified = true;
   }
 
-  // 2. 12-Hour Auto Clock Out check (720 minutes)
+  // 1b. Self-healing check: if OFF DUTY and last clock in/out were not today, today's work must be 0!
+  if (user.clockStatus === 'OUT' && inDateStr !== todayStr && outDateStr !== todayStr && (user.totalMinutesToday || 0) > 0) {
+    user.totalMinutesToday = 0;
+    user.lastClockDate = todayStr;
+    modified = true;
+  }
+
+  // 2. 12-Hour Auto Clock Out check (720 minutes max per shift)
   if (user.clockStatus === 'IN' && user.lastClockIn) {
     const elapsedMins = Math.floor((now.getTime() - new Date(user.lastClockIn).getTime()) / 60000);
     if (elapsedMins >= 720) {
@@ -27,9 +57,17 @@ function applyBackendAttendanceRules(user) {
       user.lastClockOut = new Date(new Date(user.lastClockIn).getTime() + 720 * 60000);
       user.totalMinutesToday = Math.min(720, (user.totalMinutesToday || 0) + 720);
       user.totalMinutesAllTime = (user.totalMinutesAllTime || 0) + 720;
+      user.lastClockDate = todayStr;
       modified = true;
     }
   }
+
+  // 3. Hard Sanity Cap: No single day can EVER exceed 12 hours (720 minutes)
+  if ((user.totalMinutesToday || 0) > 720) {
+    user.totalMinutesToday = 720;
+    modified = true;
+  }
+
   return modified;
 }
 
